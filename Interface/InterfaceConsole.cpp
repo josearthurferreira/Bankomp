@@ -1,6 +1,8 @@
 #include "InterfaceConsole.h"
 #include <iostream>
 #include <iomanip>
+#include <termios.h>
+#include <unistd.h>
 
 #define RESET   "\033[0m"
 #define GREEN   "\033[32m"
@@ -32,7 +34,9 @@ void InterfaceConsole::handleLogin() {
     std::string password;
     std::cout << "\nNúmero da Conta: ";
     std::cin >> number;
+    setStdinEcho(false);
     std::cout << "Senha: ";
+    setStdinEcho(true);
     std::cin >> password;
 
     auto acc = bank->authenticate(number, password);
@@ -45,7 +49,7 @@ void InterfaceConsole::handleLogin() {
 }
 
 void InterfaceConsole::handleCreateAccount() {
-    std::string name, cpf, password;
+    std::string name, cpf, password, passwordconfirm;
     int type;
     double deposit, attr;
 
@@ -67,7 +71,19 @@ void InterfaceConsole::handleCreateAccount() {
         std::cin >> attr;
     }
     std::cout << "Crie uma Senha: ";
+    setStdinEcho(false);
     std::cin >> password;
+    setStdinEcho(true);
+    std::cout << "\nConfirme sua Senha: ";
+    setStdinEcho(false);
+    std::cin >> passwordconfirm;
+    setStdinEcho(true);
+
+    if(password!=passwordconfirm){
+        std::cout << RED << "\nA senha não corresponde!\n" << RESET;
+        return;
+    }
+
 
     if (bank->createAccount(name, cpf, type, deposit, password, attr)) {
         std::cout << GREEN << "\nConta criada com sucesso!\n" << RESET;
@@ -120,4 +136,15 @@ void InterfaceConsole::handleUserSession(std::shared_ptr<Account> acc) {
             break;
         }
     }
+}
+
+void InterfaceConsole::setStdinEcho(bool enable) {
+    struct termios tty;
+    tcgetattr(STDIN_FILENO, &tty);
+    if (!enable) {
+        tty.c_lflag &= ~ECHO; // Desativa o echo
+    } else {
+        tty.c_lflag |= ECHO; // Ativa o echo
+    }
+    (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 }

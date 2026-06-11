@@ -13,6 +13,7 @@ private:
 public:
     InterfaceConsole(std::shared_ptr<Bank> b);
     void showMenu() override;
+    void setStdinEcho(bool enable);
 };
 
 #endif
