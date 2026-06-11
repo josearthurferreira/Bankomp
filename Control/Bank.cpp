@@ -35,7 +35,7 @@ void Bank::saveToStorage() {
     dataManager->saveRecords(records);
 }
 
-bool Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double specialAttr) {
+int Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double specialAttr) {
     int number = 1000 + accounts.size(); 
     auto client = std::make_shared<Client>(name, cpf);
     std::string hash = Cryptography::generateHash(password);
@@ -46,7 +46,7 @@ bool Bank::createAccount(const std::string& name, const std::string& cpf, int ty
         accounts.push_back(std::make_shared<SavingAccount>(number, initialDeposit, client, hash, specialAttr));
     }
     saveToStorage();
-    return true;
+    return number;
 }
 
 std::shared_ptr<Account> Bank::authenticate(int number, const std::string& password) {

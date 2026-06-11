@@ -85,8 +85,21 @@ void InterfaceConsole::handleCreateAccount() {
     }
 
 
-    if (bank->createAccount(name, cpf, type, deposit, password, attr)) {
-        std::cout << GREEN << "\nConta criada com sucesso!\n" << RESET;
+    int accountNumber = bank->createAccount(name, cpf, type, deposit, password, attr);
+
+    if (accountNumber > 0) {
+        std::cout << GREEN << "\n=======================================\n" << RESET;
+        std::cout << GREEN << "      CONTA CRIADA COM SUCESSO!        \n" << RESET;
+        std::cout << GREEN << "=======================================\n" << RESET;
+        std::cout << " Titular: " << name << "\n";
+        std::cout << " CPF: " << cpf << "\n";
+        std::cout << " Tipo: " << (type == 1 ? "Conta Corrente" : "Conta Poupança") << "\n";
+        std::cout << " Saldo Inicial: R$ " << std::fixed << std::setprecision(2) << deposit << "\n";
+        std::cout << "---------------------------------------\n";
+        std::cout << " NÚMERO DA CONTA: " << CYAN << accountNumber << RESET << "\n";
+        std::cout << "---------------------------------------\n";
+        std::cout << RED << " ATENÇÃO: Guarde este número para Login!\n" << RESET;
+        std::cout << GREEN << "=======================================\n\n" << RESET;
     }
 }
 
