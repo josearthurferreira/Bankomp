@@ -9,12 +9,20 @@ Bank::Bank(std::shared_ptr<DataManager> dm) : dataManager(dm) {}
 void Bank::loadFromStorage() {
     accounts.clear();
     auto records = dataManager->loadRecords();
-    for (const auto& r : records) {
-        auto client = std::make_shared<Client>(r.clientName, r.clientCpf);
-        if (r.accountType == 1) {
-            accounts.push_back(std::make_shared<CurrentAccount>(r.accountNumber, r.balance, client, r.passwordHash, r.specialLimitOrInterest));
+    for (const auto& rec : records) {
+        auto client = std::make_shared<Client>(rec.clientName, rec.clientCpf);
+        if (rec.accountType == 1) {
+            accounts.push_back(std::make_shared<CurrentAccount>(rec.accountNumber, rec.balance, client, rec.passwordHash, rec.specialLimitOrInterest));
         } else {
-            accounts.push_back(std::make_shared<SavingAccount>(r.accountNumber, r.balance, client, r.passwordHash, r.specialLimitOrInterest));
+            accounts.push_back(std::make_shared<SavingAccount>(rec.accountNumber, rec.balance, client, rec.passwordHash, rec.specialLimitOrInterest));
+        }
+    }
+
+    auto txRecords = dataManager->loadTransactions();
+    for (const auto& rec : txRecords) {
+        auto acc = findAccount(rec.accountNumber);
+        if (acc) {
+            acc->addTransaction(rec.type, rec.amount, rec.details);
         }
     }
 }
@@ -22,17 +30,38 @@ void Bank::loadFromStorage() {
 void Bank::saveToStorage() {
     std::vector<RecordData> records;
     for (const auto& acc : accounts) {
-        RecordData r;
-        std::strncpy(r.clientName, acc->getClient()->getName().c_str(), sizeof(r.clientName));
-        std::strncpy(r.clientCpf, acc->getClient()->getCpf().c_str(), sizeof(r.clientCpf));
-        r.accountNumber = acc->getNumber();
-        r.balance = acc->getBalance();
-        r.accountType = acc->getType();
-        r.specialLimitOrInterest = acc->getSpecialAttribute();
-        std::strncpy(r.passwordHash, acc->getPasswordHash().c_str(), sizeof(r.passwordHash));
-        records.push_back(r);
+        RecordData rec;
+        std::strncpy(rec.clientName, acc->getClient()->getName().c_str(), sizeof(rec.clientName) - 1);
+        rec.clientName[sizeof(rec.clientName) - 1] = '\0';
+        
+        std::strncpy(rec.clientCpf, acc->getClient()->getCpf().c_str(), sizeof(rec.clientCpf) - 1);
+        rec.clientCpf[sizeof(rec.clientCpf) - 1] = '\0';
+        
+        rec.accountNumber = acc->getNumber();
+        rec.balance = acc->getBalance();
+        rec.accountType = acc->getType();
+        rec.specialLimitOrInterest = acc->getSpecialAttribute();
+        
+        std::strncpy(rec.passwordHash, acc->getPasswordHash().c_str(), sizeof(rec.passwordHash) - 1);
+        rec.passwordHash[sizeof(rec.passwordHash) - 1] = '\0';
+        
+        records.push_back(rec);
     }
     dataManager->saveRecords(records);
+
+    std::vector<TransactionRecord> txRecords;
+    for (const auto& acc : accounts) {
+        for (const auto& tx : acc->getTransactions()) {
+            TransactionRecord rec;
+            rec.accountNumber = acc->getNumber();
+            rec.type = tx.type;
+            rec.amount = tx.amount;
+            std::strncpy(rec.details, tx.details.c_str(), sizeof(rec.details) - 1);
+            rec.details[sizeof(rec.details) - 1] = '\0';
+            txRecords.push_back(rec);
+        }
+    }
+    dataManager->saveTransactions(txRecords);
 }
 
 int Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double specialAttr) {
@@ -64,11 +93,16 @@ std::shared_ptr<Account> Bank::findAccount(int number) {
     return nullptr;
 }
 
-bool Bank::transfer(int fromNumber, int toNumber, double amount) {
-    auto from = findAccount(fromNumber);
-    auto to = findAccount(toNumber);
-    if (from && to && from->withdraw(amount)) {
-        to->deposit(amount);
+bool Bank::transfer(int srcNumber, int destNumber, double amount) {
+    if (amount <= 0 || srcNumber == destNumber) return false;
+    auto src = findAccount(srcNumber);
+    auto dest = findAccount(destNumber);
+    if (!src || !dest) return false;
+
+    if (src->withdraw(amount)) {
+        dest->deposit(amount);
+        src->addTransaction(2, amount, "Para: " + dest->getClient()->getName() + " (" + std::to_string(destNumber) + ")");
+        dest->addTransaction(3, amount, "De: " + src->getClient()->getName() + " (" + std::to_string(srcNumber) + ")");
         saveToStorage();
         return true;
     }
