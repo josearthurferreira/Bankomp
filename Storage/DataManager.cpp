@@ -28,3 +28,28 @@ std::vector<RecordData> DataManager::loadRecords() {
     }
     return records;
 }
+
+void DataManager::saveTransactions(const std::vector<TransactionRecord>& records) {
+    std::ofstream file("transacoes.dat", std::ios::binary | std::ios::trunc);
+    if (!file) return;
+    
+    for (auto rec : records) {
+        Cryptography::applyXOR(reinterpret_cast<char*>(&rec), sizeof(TransactionRecord), cryptoKey);
+        file.write(reinterpret_cast<const char*>(&rec), sizeof(TransactionRecord));
+    }
+    file.close();
+}
+
+std::vector<TransactionRecord> DataManager::loadTransactions() {
+    std::vector<TransactionRecord> records;
+    std::ifstream file("transacoes.dat", std::ios::binary);
+    if (!file) return records;
+    
+    TransactionRecord rec;
+    while (file.read(reinterpret_cast<char*>(&rec), sizeof(TransactionRecord))) {
+        Cryptography::applyXOR(reinterpret_cast<char*>(&rec), sizeof(TransactionRecord), cryptoKey);
+        records.push_back(rec);
+    }
+    file.close();
+    return records;
+}

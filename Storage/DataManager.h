@@ -12,6 +12,8 @@ public:
     DataManager(const std::string& file, const std::string& key);
     bool saveRecords(const std::vector<RecordData>& records);
     std::vector<RecordData> loadRecords();
+    void saveTransactions(const std::vector<TransactionRecord>& records);
+    std::vector<TransactionRecord> loadTransactions();
 };
 
 #endif

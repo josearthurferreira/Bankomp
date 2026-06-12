@@ -11,3 +11,11 @@ std::string Account::getPasswordHash() const { return passwordHash; }
 void Account::deposit(double amount) {
     if (amount > 0) balance += amount;
 }
+
+void Account::addTransaction(int type, double amount, const std::string& details) {
+    transactions.push_back({type, amount, details});
+}
+
+const std::vector<Transaction>& Account::getTransactions() const { return transactions; }
+
+void Account::clearTransactions() { transactions.clear(); }

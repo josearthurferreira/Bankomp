@@ -1,7 +1,15 @@
 #ifndef ACCOUNT_H
 #define ACCOUNT_H
+#include <vector>
+#include <string>
 #include "Client.h"
 #include <memory>
+
+struct Transaction {
+    int type;
+    double amount;
+    std::string details;
+};
 
 class Account {
 protected:
@@ -9,6 +17,7 @@ protected:
     double balance;
     std::shared_ptr<Client> client;
     std::string passwordHash;
+    std::vector<Transaction> transactions;
 public:
     Account(int number, double balance, std::shared_ptr<Client> client, const std::string& hash);
     virtual ~Account() = default;
@@ -22,6 +31,10 @@ public:
     virtual bool withdraw(double amount) = 0;
     virtual int getType() const = 0;
     virtual double getSpecialAttribute() const = 0;
+
+    void addTransaction(int type, double amount, const std::string& details);
+    const std::vector<Transaction>& getTransactions() const;
+    void clearTransactions();
 };
 
 #endif

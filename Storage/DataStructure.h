@@ -11,4 +11,11 @@ struct RecordData {
     char passwordHash[65];
 };
 
+struct TransactionRecord {
+    int accountNumber; 
+    int type;          // 1 = Saque, 2 = Transf. Enviada, 3 = Transf. Recebida
+    double amount;
+    char details[100]; 
+};
+
 #endif
