@@ -64,16 +64,27 @@ void Bank::saveToStorage() {
     dataManager->saveTransactions(txRecords);
 }
 
-int Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double specialAttr) {
+bool Bank::isCpfRegistered(const std::string& cpf) const {
+    for (const auto& acc : accounts) {
+        if (acc->getClient()->getCpf() == cpf) return true;
+    }
+    return false;
+}
+
+int Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password) {
     int number = 1000 + accounts.size(); 
     auto client = std::make_shared<Client>(name, cpf);
     std::string hash = Cryptography::generateHash(password);
     
+    double specialAttr = 0.0;
     if (type == 1) {
+        specialAttr = 500.0;
         accounts.push_back(std::make_shared<CurrentAccount>(number, initialDeposit, client, hash, specialAttr));
     } else {
+        specialAttr = 0.05;
         accounts.push_back(std::make_shared<SavingAccount>(number, initialDeposit, client, hash, specialAttr));
     }
+    
     saveToStorage();
     return number;
 }

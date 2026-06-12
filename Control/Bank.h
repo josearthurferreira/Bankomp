@@ -14,10 +14,11 @@ public:
     void loadFromStorage();
     void saveToStorage();
 
-    int createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double specialAttr);
+    int createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password);
     std::shared_ptr<Account> authenticate(int number, const std::string& password);
     std::shared_ptr<Account> findAccount(int number);
     bool transfer(int fromNumber, int toNumber, double amount);
+    bool isCpfRegistered(const std::string& cpf) const;
 };
 
 #endif

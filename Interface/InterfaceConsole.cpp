@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <algorithm>
 #include <limits> 
+#include <regex> 
 
 #define RESET   "\033[0m"
 #define GREEN   "\033[32m"
@@ -97,12 +98,28 @@ void InterfaceConsole::handleLogin() {
 void InterfaceConsole::handleCreateAccount() {
     std::string name, cpf, password, passwordconfirm;
     int type;
-    double deposit, attr;
+    double deposit;
 
     std::cout << CYAN << "\n=== ABERTURA DE NOVA CONTA ===\n" << RESET;
     
     name = readStringSafe("Nome do Titular: ", true);
-    cpf = readStringSafe("CPF: ", false);
+    
+    // 1. Validação de formato e unicidade do CPF
+    std::regex cpfRegex(R"(\d{3}\.\d{3}\.\d{3}-\d{2})");
+    while (true) {
+        cpf = readStringSafe("CPF (formato XXX.XXX.XXX-XX ou 0 para voltar): ", false);
+        if (cpf == "0") return;
+
+        if (!std::regex_match(cpf, cpfRegex)) {
+            std::cout << RED << "Formato inválido! Use os pontos e o traço.\n" << RESET;
+            continue;
+        }
+        if (bank->isCpfRegistered(cpf)) {
+            std::cout << RED << "Erro: Este CPF já possui uma conta no sistema!\n" << RESET;
+            return; // Interrompe a criação, pois o cliente já é do banco
+        }
+        break;
+    }
     
     while (true) {
         type = readIntSafe("Tipo (1 - Corrente, 2 - Poupança): ");
@@ -116,19 +133,7 @@ void InterfaceConsole::handleCreateAccount() {
         std::cout << RED << "O depósito inicial não pode ser negativo.\n" << RESET;
     }
     
-    if (type == 1) {
-        while (true) {
-            attr = readDoubleSafe("Limite do Cheque Especial: R$ ");
-            if (attr >= 0) break;
-            std::cout << RED << "O limite não pode ser negativo.\n" << RESET;
-        }
-    } else {
-        while (true) {
-            attr = readDoubleSafe("Taxa de Rendimento Anual (ex: 0.05 para 5%): ");
-            if (attr >= 0) break;
-            std::cout << RED << "A taxa de rendimento não pode ser negativa.\n" << RESET;
-        }
-    }
+    // 2. Removemos os loops que pediam os valores de attr manualmente!
     
     while (true) {
         std::cout << "Crie uma Senha: ";
@@ -142,13 +147,12 @@ void InterfaceConsole::handleCreateAccount() {
         setStdinEcho(true);
         std::cout << "\n";
 
-        if (password == passwordconfirm) {
-            break;
-        }
-        std::cout << RED << "As senhas não correspondem! Tente criar a senha novamente.\n" << RESET;
+        if (password == passwordconfirm) break;
+        std::cout << RED << "As senhas não correspondem! Tente novamente.\n" << RESET;
     }
 
-    int accountNumber = bank->createAccount(name, cpf, type, deposit, password, attr);
+    // 3. Chamada atualizada sem passar o 'attr'
+    int accountNumber = bank->createAccount(name, cpf, type, deposit, password);
 
     if (accountNumber > 0) {
         std::cout << GREEN << "\n=======================================\n" << RESET;
@@ -156,7 +160,7 @@ void InterfaceConsole::handleCreateAccount() {
         std::cout << GREEN << "=======================================\n" << RESET;
         std::cout << " Titular: " << name << "\n";
         std::cout << " CPF: " << cpf << "\n";
-        std::cout << " Tipo: " << (type == 1 ? "Conta Corrente" : "Conta Poupança") << "\n";
+        std::cout << " Tipo: " << (type == 1 ? "Conta Corrente (Limite Pré-Aprovado: R$ 500,00)" : "Conta Poupança (Rendimento: 5% a.a.)") << "\n";
         std::cout << " Saldo Inicial: R$ " << std::fixed << std::setprecision(2) << deposit << "\n";
         std::cout << "---------------------------------------\n";
         std::cout << " NÚMERO DA CONTA: " << CYAN << accountNumber << RESET << "\n";
