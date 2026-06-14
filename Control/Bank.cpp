@@ -71,18 +71,36 @@ bool Bank::isCpfRegistered(const std::string& cpf) const {
     return false;
 }
 
-int Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password) {
+int Bank::createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double income) {
     int number = 1000 + accounts.size(); 
     auto client = std::make_shared<Client>(name, cpf);
     std::string hash = Cryptography::generateHash(password);
     
+    int tier = 1; 
     double specialAttr = 0.0;
+
+    if (income > 0) {
+        if (income >= 20000) tier = 5;       
+        else if (income >= 10000) tier = 4;  
+        else if (income >= 3000) tier = 3;   
+        else tier = 2;                       
+    }
+
     if (type == 1) {
-        specialAttr = 500.0;
-        accounts.push_back(std::make_shared<CurrentAccount>(number, initialDeposit, client, hash, specialAttr));
+        if (tier == 5) specialAttr = income * 2.0;       
+        else if (tier == 4) specialAttr = income * 1.5;  
+        else if (tier == 3) specialAttr = income * 1.0; 
+        else if (tier == 2) specialAttr = income * 0.5;  
+        else specialAttr = 0.0;
+
+        accounts.push_back(std::make_shared<CurrentAccount>(number, initialDeposit, client, hash, specialAttr, tier, income));
     } else {
-        specialAttr = 0.05;
-        accounts.push_back(std::make_shared<SavingAccount>(number, initialDeposit, client, hash, specialAttr));
+        if (tier == 5) specialAttr = 0.10;       
+        else if (tier == 4) specialAttr = 0.08;  
+        else if (tier == 3) specialAttr = 0.06;  
+        else specialAttr = 0.05;                 
+
+        accounts.push_back(std::make_shared<SavingAccount>(number, initialDeposit, client, hash, specialAttr, tier, income));
     }
     
     saveToStorage();

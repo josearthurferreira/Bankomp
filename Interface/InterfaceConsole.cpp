@@ -104,7 +104,6 @@ void InterfaceConsole::handleCreateAccount() {
     
     name = readStringSafe("Nome do Titular: ", true);
     
-    // 1. Validação de formato e unicidade do CPF
     std::regex cpfRegex(R"(\d{3}\.\d{3}\.\d{3}-\d{2})");
     while (true) {
         cpf = readStringSafe("CPF (formato XXX.XXX.XXX-XX ou 0 para voltar): ", false);
@@ -116,7 +115,7 @@ void InterfaceConsole::handleCreateAccount() {
         }
         if (bank->isCpfRegistered(cpf)) {
             std::cout << RED << "Erro: Este CPF já possui uma conta no sistema!\n" << RESET;
-            return; // Interrompe a criação, pois o cliente já é do banco
+            return;
         }
         break;
     }
@@ -132,8 +131,19 @@ void InterfaceConsole::handleCreateAccount() {
         if (deposit >= 0) break;
         std::cout << RED << "O depósito inicial não pode ser negativo.\n" << RESET;
     }
+
+    double income = 0.0;
+    int wantsAnalysis = readIntSafe("\nDeseja realizar análise de crédito para obter benefícios e limites maiores? (1 - Sim, 2 - Não): ");
     
-    // 2. Removemos os loops que pediam os valores de attr manualmente!
+    if (wantsAnalysis == 1) {
+        while (true) {
+            income = readDoubleSafe("Informe sua renda mensal comprovada: R$ ");
+            if (income >= 0) break;
+            std::cout << RED << "Renda não pode ser negativa.\n" << RESET;
+        }
+        std::cout << BLUE << "Analisando perfil...\n" << RESET;
+        sleep(1);
+    }
     
     while (true) {
         std::cout << "Crie uma Senha: ";
@@ -151,16 +161,16 @@ void InterfaceConsole::handleCreateAccount() {
         std::cout << RED << "As senhas não correspondem! Tente novamente.\n" << RESET;
     }
 
-    // 3. Chamada atualizada sem passar o 'attr'
-    int accountNumber = bank->createAccount(name, cpf, type, deposit, password);
+    int accountNumber = bank->createAccount(name, cpf, type, deposit, password, income);
 
     if (accountNumber > 0) {
+        auto newAcc = bank->findAccount(accountNumber);
         std::cout << GREEN << "\n=======================================\n" << RESET;
         std::cout << GREEN << "      CONTA CRIADA COM SUCESSO!        \n" << RESET;
         std::cout << GREEN << "=======================================\n" << RESET;
         std::cout << " Titular: " << name << "\n";
         std::cout << " CPF: " << cpf << "\n";
-        std::cout << " Tipo: " << (type == 1 ? "Conta Corrente (Limite Pré-Aprovado: R$ 500,00)" : "Conta Poupança (Rendimento: 5% a.a.)") << "\n";
+        std::cout << " Nível da Conta: " << CYAN << newAcc->getTierName() << RESET << "\n";
         std::cout << " Saldo Inicial: R$ " << std::fixed << std::setprecision(2) << deposit << "\n";
         std::cout << "---------------------------------------\n";
         std::cout << " NÚMERO DA CONTA: " << CYAN << accountNumber << RESET << "\n";

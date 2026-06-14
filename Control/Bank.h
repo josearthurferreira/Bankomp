@@ -14,7 +14,7 @@ public:
     void loadFromStorage();
     void saveToStorage();
 
-    int createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password);
+    int createAccount(const std::string& name, const std::string& cpf, int type, double initialDeposit, const std::string& password, double income);
     std::shared_ptr<Account> authenticate(int number, const std::string& password);
     std::shared_ptr<Account> findAccount(int number);
     bool transfer(int fromNumber, int toNumber, double amount);

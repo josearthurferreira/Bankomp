@@ -9,6 +9,8 @@ struct RecordData {
     int accountType; // 1 = Current, 2 = Saving
     double specialLimitOrInterest;
     char passwordHash[65];
+    int tier;
+    double income;
 };
 
 struct TransactionRecord {

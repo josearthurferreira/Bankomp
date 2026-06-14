@@ -18,8 +18,10 @@ protected:
     std::shared_ptr<Client> client;
     std::string passwordHash;
     std::vector<Transaction> transactions;
+    int tier;
+    double income;
 public:
-    Account(int number, double balance, std::shared_ptr<Client> client, const std::string& hash);
+    Account(int number, double balance, std::shared_ptr<Client> client, const std::string& hash, int tier = 1, double income = 0.0);
     virtual ~Account() = default;
 
     int getNumber() const;
@@ -35,6 +37,10 @@ public:
     void addTransaction(int type, double amount, const std::string& details);
     const std::vector<Transaction>& getTransactions() const;
     void clearTransactions();
+
+    int getTier() const;
+    double getIncome() const;
+    std::string getTierName() const;
 };
 
 #endif
