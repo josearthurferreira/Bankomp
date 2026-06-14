@@ -31,3 +31,33 @@ void Account::addTransaction(int type, double amount, const std::string& details
 const std::vector<Transaction>& Account::getTransactions() const { return transactions; }
 
 void Account::clearTransactions() { transactions.clear(); }
+
+double Account::getMonthlyDeposits() const {
+    double total = 0.0;
+    for (const auto& t : transactions) {
+        if (t.type == 1) total += t.amount;
+    }
+    return total;
+}
+
+double Account::getMonthlyWithdrawals() const {
+    double total = 0.0;
+    for (const auto& t : transactions) {
+        if (t.type == 2) total += t.amount;
+    }
+    return total;
+}
+
+int Account::calculateCreditScore() const {
+    double dep = getMonthlyDeposits();
+    double wth = getMonthlyWithdrawals();
+    
+    double rawScore = (balance * 0.4) + (dep * 0.6) - (wth * 0.2);
+    
+    int score = static_cast<int>(rawScore);
+    
+    if (score < 0) score = 0;
+    if (score > 1000) score = 1000;
+    
+    return score;
+}

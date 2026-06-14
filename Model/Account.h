@@ -41,6 +41,10 @@ public:
     int getTier() const;
     double getIncome() const;
     std::string getTierName() const;
+
+    double getMonthlyDeposits() const;
+    double getMonthlyWithdrawals() const;
+    int calculateCreditScore() const;
 };
 
 #endif

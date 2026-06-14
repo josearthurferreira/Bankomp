@@ -10,6 +10,7 @@ private:
     void handleLogin();
     void handleCreateAccount();
     void handleUserSession(std::shared_ptr<Account> acc);
+    void handleViewProfile(std::shared_ptr<Account> acc);
 public:
     InterfaceConsole(std::shared_ptr<Bank> b);
     void showMenu() override;

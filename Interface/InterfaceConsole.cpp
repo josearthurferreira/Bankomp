@@ -12,6 +12,8 @@
 #define RED     "\033[31m"
 #define BLUE    "\033[34m"
 #define CYAN    "\033[36m"
+#define YELLOW  "\033[33m"
+#define MAGENTA "\033[35m"
 
 InterfaceConsole::InterfaceConsole(std::shared_ptr<Bank> b) : bank(b) {}
 
@@ -181,15 +183,26 @@ void InterfaceConsole::handleCreateAccount() {
 }
 
 void InterfaceConsole::handleUserSession(std::shared_ptr<Account> acc) {
+    bool showSessionBalance = false; // Controle de visibilidade do saldo no menu principal
+
     while (true) {
         std::cout << BLUE << "\n--- Bem-vindo, " << acc->getClient()->getName() << " ---\n" << RESET;
-        std::cout << std::fixed << std::setprecision(2);
-        std::cout << "Saldo Flexível: R$ " << acc->getBalance() << "\n";
+        
+        // Exibição do Saldo (Mascarado ou Visível)
+        std::cout << "Saldo Flexível: ";
+        if (showSessionBalance) {
+            std::cout << GREEN << "R$ " << std::fixed << std::setprecision(2) << acc->getBalance() << RESET << "\n";
+        } else {
+            std::cout << MAGENTA << "R$ XXXX.XX" << RESET << "\n";
+        }
+
         std::cout << "1. Depósito\n";
         std::cout << "2. Saque\n";
         std::cout << "3. Transferência Bancária\n";
         std::cout << "4. Extrato de Transações\n";
-        std::cout << "5. Logout (Sair da Conta)\n";
+        std::cout << "5. Perfil e Score de Crédito\n";
+        std::cout << "6. Ver/Ocultar Saldo\n";
+        std::cout << "7. Logout (Sair da Conta)\n";
         
         int option = readIntSafe("Escolha uma opção: ");
 
@@ -288,9 +301,16 @@ void InterfaceConsole::handleUserSession(std::shared_ptr<Account> acc) {
             }
             std::cout << CYAN << "=======================================\n" << RESET;
         } else if (option == 5) {
-            break;
+            // Chama a visualização de perfil passando a conta atual
+            handleViewProfile(acc);
+        } else if (option == 6) {
+            // Inverte a visibilidade do saldo no menu principal
+            showSessionBalance = !showSessionBalance; 
+        } else if (option == 7) {
+            std::cout << GREEN << "Saindo da conta... Até logo!\n" << RESET;
+            break; // Retorna ao menu inicial de Login/Cadastro
         } else {
-            std::cout << RED << "Opção Inválida!n" << RESET;
+            std::cout << RED << "Opção Inválida!\n" << RESET;
         }
     }
 }
@@ -304,4 +324,93 @@ void InterfaceConsole::setStdinEcho(bool enable) {
         tty.c_lflag |= ECHO;
     }
     (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+}
+
+void InterfaceConsole::handleViewProfile(std::shared_ptr<Account> acc) {
+    while (true) {
+        std::cout << CYAN << "\n=======================================\n" << RESET;
+        std::cout << CYAN << "      PERFIL E INFORMAÇÕES DA CONTA    \n" << RESET;
+        std::cout << CYAN << "=======================================\n" << RESET;
+        
+        std::cout << " Titular: " << acc->getClient()->getName() << "\n";
+        std::cout << " CPF: " << acc->getClient()->getCpf() << "\n";
+        std::cout << " Conta: " << acc->getNumber() << "\n";
+        std::cout << " Nível: " << acc->getTierName() << "\n";
+        
+        int score = acc->calculateCreditScore();
+        std::cout << " Score de Crédito Interno: ";
+        
+        if (score >= 700) std::cout << GREEN << score << " / 1000 (Excelente)\n" << RESET;
+        else if (score >= 300) std::cout << YELLOW << score << " / 1000 (Bom)\n" << RESET;
+        else std::cout << RED << score << " / 1000 (Baixo)\n" << RESET;
+
+        std::cout << "---------------------------------------\n";
+        std::cout << "1. Análise e Dicas para o Score\n";
+        std::cout << "0. Voltar\n";
+        
+        int choice = readIntSafe("Escolha uma opção: ");
+        
+        if (choice == 1) {
+            while (true) {
+                std::cout << CYAN << "\n--- ANÁLISE DO SEU PERFIL FINANCEIRO ---\n" << RESET;
+                
+                double dep = acc->getMonthlyDeposits();
+                double wth = acc->getMonthlyWithdrawals();
+                double bal = acc->getBalance();
+
+                // 1. O QUE ESTÁ BOM (Verde)
+                std::cout << GREEN << "[+] O que está fortalecendo seu Score:\n" << RESET;
+                bool hasGood = false;
+                if (dep > wth && dep > 0) { 
+                    std::cout << "  - Entradas maiores que saídas. Excelente controle financeiro!\n"; 
+                    hasGood = true; 
+                }
+                if (bal >= 1000) { 
+                    std::cout << "  - Saldo alto e estável, o que garante uma excelente pontuação base.\n"; 
+                    hasGood = true; 
+                }
+                if (!hasGood) std::cout << "  - (Nenhum ponto forte detectado no momento)\n";
+
+                // 2. O QUE PODE MELHORAR (Amarelo - Alertas moderados)
+                std::cout << YELLOW << "\n[~] O que pode melhorar:\n" << RESET;
+                bool hasImprove = false;
+                if (dep > 0 && wth >= dep) { 
+                    std::cout << "  - Você possui entradas, mas os saques/gastos estão equivalentes ou maiores.\n"; 
+                    hasImprove = true; 
+                }
+                if (bal > 0 && bal < 1000) { 
+                    std::cout << "  - Seu saldo está positivo, mas aumentar a quantia guardada subirá seu score.\n"; 
+                    hasImprove = true; 
+                }
+                if (!hasImprove) std::cout << "  - (Nenhum alerta moderado no momento)\n";
+
+                // 3. O QUE ESTÁ RUIM (Vermelho - Crítico para a nota)
+                std::cout << RED << "\n[-] O que está prejudicando seu Score:\n" << RESET;
+                bool hasBad = false;
+                if (dep == 0) {
+                    std::cout << "  - Zero movimentações de entrada. Depósitos representam 60% da nota.\n";
+                    hasBad = true;
+                }
+                if (bal <= 0) { 
+                    std::cout << "  - Saldo zerado. Manter dinheiro na conta compõe 40% da sua nota.\n"; 
+                    hasBad = true; 
+                }
+                if (!hasBad) std::cout << "  - (Nenhum fator crítico detectado)\n";
+                
+                std::cout << "---------------------------------------\n";
+                
+                // Loop local para garantir que o usuário digite 0 para sair do relatório
+                int backChoice = readIntSafe("Digite 0 para voltar: ");
+                if (backChoice == 0) {
+                    break;
+                } else {
+                    std::cout << RED << "Opção inválida.\n" << RESET;
+                }
+            }
+        } else if (choice == 0) {
+            break;
+        } else {
+            std::cout << RED << "Opção inválida.\n" << RESET;
+        }
+    }
 }
