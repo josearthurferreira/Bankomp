@@ -11,6 +11,8 @@ public:
     void applyInterest();
     int getType() const override { return 2; }
     double getSpecialAttribute() const override { return interestRate; }
+    public:
+    void updateAccountState() override;
 };
 
 #endif

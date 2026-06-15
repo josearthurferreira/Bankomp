@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <limits> 
 #include <regex> 
+#include <ctime>
 
 #define RESET   "\033[0m"
 #define GREEN   "\033[32m"
@@ -81,19 +82,30 @@ void InterfaceConsole::showMenu() {
 
 void InterfaceConsole::handleLogin() {
     int number = readIntSafe("\nNúmero da Conta: ");
-    
-    std::cout << "Senha: ";
-    setStdinEcho(false);
-    std::string password = readStringSafe("");
-    setStdinEcho(true);
-    std::cout << "\n";
+    int attempts = 3;
 
-    auto acc = bank->authenticate(number, password);
-    if (acc) {
-        std::cout << GREEN << "Login efetuado com sucesso!\n" << RESET;
-        handleUserSession(acc);
-    } else {
-        std::cout << RED << "Conta ou senha incorretas.\n" << RESET;
+    while (attempts > 0) {
+        std::cout << "Senha: ";
+        setStdinEcho(false);
+        std::string password = readStringSafe("");
+        setStdinEcho(true);
+        std::cout << "\n";
+
+        auto acc = bank->authenticate(number, password);
+        if (acc) {
+            std::cout << GREEN << "Login efetuado com sucesso!\n" << RESET;
+            acc->updateAccountState(); 
+            bank->saveToStorage();
+            handleUserSession(acc);
+            return;
+        } else {
+            attempts--;
+            if (attempts > 0) {
+                std::cout << RED << "Conta ou senha incorretas. Você tem " << attempts << " tentativa(s) restante(s).\n" << RESET;
+            } else {
+                std::cout << RED << "Número máximo de tentativas atingido. Retornando ao menu principal...\n" << RESET;
+            }
+        }
     }
 }
 
@@ -281,9 +293,9 @@ void InterfaceConsole::handleUserSession(std::shared_ptr<Account> acc) {
                 std::cout << RED << "Falha: Saldo ou limite de crédito insuficiente.\n" << RESET;
             }
         } else if (option == 4) {
-            std::cout << CYAN << "\n=======================================\n";
-            std::cout << "         EXTRATO DE TRANSAÇÕES         \n";
-            std::cout << "=======================================\n" << RESET;
+            std::cout << CYAN << "\n=======================================================\n";
+            std::cout << "                 EXTRATO DE TRANSAÇÕES                 \n";
+            std::cout << "=======================================================\n" << RESET;
             
             const auto& txs = acc->getTransactions();
             if (txs.empty()) {
@@ -291,24 +303,32 @@ void InterfaceConsole::handleUserSession(std::shared_ptr<Account> acc) {
             } else {
                 for (const auto& tx : txs) {
                     std::string label;
-                    if (tx.type == 1) label = RED "[SAQUE]         " RESET;
-                    else if (tx.type == 2) label = RED "[TX ENVIADA]    " RESET;
-                    else if (tx.type == 3) label = GREEN "[TX RECEBIDA]   " RESET;
-                    else if (tx.type == 4) label = GREEN "[DEPÓSITO]      " RESET;
+                    if (tx.type == 1) label = RED "[SAQUE]       " RESET;
+                    else if (tx.type == 2) label = RED "[TX ENVIADA]  " RESET;
+                    else if (tx.type == 3) label = GREEN "[TX RECEBIDA] " RESET;
+                    else if (tx.type == 4) label = GREEN "[DEPÓSITO]    " RESET;
+                    else if (tx.type == 5) label = GREEN "[RENDIMENTO]  " RESET;
                     
-                    std::cout << label << "R$ " << std::setw(8) << tx.amount << " -> " << tx.details << "\n";
+                    // Formatação da Data/Hora
+                    char timeStr[20] = "Data Desconhecida";
+                    if (tx.timestamp != 0) {
+                        struct tm* timeinfo = std::localtime(&tx.timestamp);
+                        std::strftime(timeStr, sizeof(timeStr), "%d/%m/%Y %H:%M", timeinfo);
+                    }
+
+                    std::cout << "[" << timeStr << "] " << label 
+                              << "R$ " << std::setw(8) << std::fixed << std::setprecision(2) << tx.amount 
+                              << " -> " << tx.details << "\n";
                 }
             }
-            std::cout << CYAN << "=======================================\n" << RESET;
+            std::cout << CYAN << "=======================================================\n" << RESET;
         } else if (option == 5) {
-            // Chama a visualização de perfil passando a conta atual
             handleViewProfile(acc);
         } else if (option == 6) {
-            // Inverte a visibilidade do saldo no menu principal
             showSessionBalance = !showSessionBalance; 
         } else if (option == 7) {
             std::cout << GREEN << "Saindo da conta... Até logo!\n" << RESET;
-            break; // Retorna ao menu inicial de Login/Cadastro
+            break;
         } else {
             std::cout << RED << "Opção Inválida!\n" << RESET;
         }
@@ -358,7 +378,6 @@ void InterfaceConsole::handleViewProfile(std::shared_ptr<Account> acc) {
                 double wth = acc->getMonthlyWithdrawals();
                 double bal = acc->getBalance();
 
-                // 1. O QUE ESTÁ BOM (Verde)
                 std::cout << GREEN << "[+] O que está fortalecendo seu Score:\n" << RESET;
                 bool hasGood = false;
                 if (dep > wth && dep > 0) { 
@@ -371,7 +390,6 @@ void InterfaceConsole::handleViewProfile(std::shared_ptr<Account> acc) {
                 }
                 if (!hasGood) std::cout << "  - (Nenhum ponto forte detectado no momento)\n";
 
-                // 2. O QUE PODE MELHORAR (Amarelo - Alertas moderados)
                 std::cout << YELLOW << "\n[~] O que pode melhorar:\n" << RESET;
                 bool hasImprove = false;
                 if (dep > 0 && wth >= dep) { 
@@ -384,7 +402,6 @@ void InterfaceConsole::handleViewProfile(std::shared_ptr<Account> acc) {
                 }
                 if (!hasImprove) std::cout << "  - (Nenhum alerta moderado no momento)\n";
 
-                // 3. O QUE ESTÁ RUIM (Vermelho - Crítico para a nota)
                 std::cout << RED << "\n[-] O que está prejudicando seu Score:\n" << RESET;
                 bool hasBad = false;
                 if (dep == 0) {
@@ -399,7 +416,6 @@ void InterfaceConsole::handleViewProfile(std::shared_ptr<Account> acc) {
                 
                 std::cout << "---------------------------------------\n";
                 
-                // Loop local para garantir que o usuário digite 0 para sair do relatório
                 int backChoice = readIntSafe("Digite 0 para voltar: ");
                 if (backChoice == 0) {
                     break;
