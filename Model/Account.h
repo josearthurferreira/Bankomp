@@ -9,6 +9,7 @@ struct Transaction {
     int type;
     double amount;
     std::string details;
+    time_t timestamp;
 };
 
 class Account {
@@ -23,6 +24,7 @@ protected:
 public:
     Account(int number, double balance, std::shared_ptr<Client> client, const std::string& hash, int tier = 1, double income = 0.0);
     virtual ~Account() = default;
+    virtual void updateAccountState() {}
 
     int getNumber() const;
     double getBalance() const;
@@ -34,7 +36,7 @@ public:
     virtual int getType() const = 0;
     virtual double getSpecialAttribute() const = 0;
 
-    void addTransaction(int type, double amount, const std::string& details);
+    void addTransaction(int type, double amount, const std::string& details, time_t t=0);
     const std::vector<Transaction>& getTransactions() const;
     void clearTransactions();
 

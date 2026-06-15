@@ -22,7 +22,8 @@ void Bank::loadFromStorage() {
     for (const auto& rec : txRecords) {
         auto acc = findAccount(rec.accountNumber);
         if (acc) {
-            acc->addTransaction(rec.type, rec.amount, rec.details);
+            // Agora passamos o timestamp recuperado do arquivo binário
+            acc->addTransaction(rec.type, rec.amount, rec.details, rec.timestamp); 
         }
     }
 }
@@ -58,6 +59,7 @@ void Bank::saveToStorage() {
             rec.amount = tx.amount;
             std::strncpy(rec.details, tx.details.c_str(), sizeof(rec.details) - 1);
             rec.details[sizeof(rec.details) - 1] = '\0';
+            rec.timestamp = tx.timestamp; // Salva o timestamp na estrutura de I/O
             txRecords.push_back(rec);
         }
     }

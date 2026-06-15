@@ -1,6 +1,8 @@
 #ifndef DATA_STRUCTURE_H
 #define DATA_STRUCTURE_H
 
+#include <ctime>
+
 struct RecordData {
     char clientName[50];
     char clientCpf[15];
@@ -18,6 +20,7 @@ struct TransactionRecord {
     int type;          // 1 = Saque, 2 = Transf. Enviada, 3 = Transf. Recebida
     double amount;
     char details[100]; 
+    time_t timestamp;
 };
 
 #endif

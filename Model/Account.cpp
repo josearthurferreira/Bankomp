@@ -1,3 +1,4 @@
+#include <ctime>
 #include "Account.h"
 
 Account::Account(int number, double balance, std::shared_ptr<Client> client, const std::string& hash, int tier, double income)
@@ -24,8 +25,9 @@ void Account::deposit(double amount) {
     if (amount > 0) balance += amount;
 }
 
-void Account::addTransaction(int type, double amount, const std::string& details) {
-    transactions.push_back({type, amount, details});
+void Account::addTransaction(int type, double amount, const std::string& details, time_t t) {
+    time_t currentTime = (t == 0) ? std::time(nullptr) : t;
+    transactions.push_back({type, amount, details, currentTime});
 }
 
 const std::vector<Transaction>& Account::getTransactions() const { return transactions; }
